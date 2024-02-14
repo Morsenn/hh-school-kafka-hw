@@ -22,21 +22,45 @@ public class TopicListener {
   @KafkaListener(topics = "topic1", groupId = "group1")
   public void atMostOnce(ConsumerRecord<?, String> consumerRecord, Acknowledgment ack) {
     LOGGER.info("Try handle message, topic {}, payload {}", consumerRecord.topic(), consumerRecord.value());
-    service.handle("topic1", consumerRecord.value());
     ack.acknowledge();
+    try {
+      service.handle("topic1", consumerRecord.value());
+    } catch (Exception e) {
+
+    }
   }
 
   @KafkaListener(topics = "topic2", groupId = "group2")
   public void atLeastOnce(ConsumerRecord<?, String> consumerRecord, Acknowledgment ack) {
     LOGGER.info("Try handle message, topic {}, payload {}", consumerRecord.topic(), consumerRecord.value());
+    while (true) {
+      try {
+        service.handle("topic2", consumerRecord.value());
+      } catch (Exception e) {
+        continue;
+      }
+      break;
+    }
     ack.acknowledge();
-    service.handle("topic2", consumerRecord.value());
   }
 
   @KafkaListener(topics = "topic3", groupId = "group3")
   public void exactlyOnce(ConsumerRecord<?, String> consumerRecord, Acknowledgment ack) {
     LOGGER.info("Try handle message, topic {}, payload {}", consumerRecord.topic(), consumerRecord.value());
-    service.handle("topic3", consumerRecord.value());
+    try {
+      service.handle("topic3", consumerRecord.value());
+    } catch (Exception e1) {
+      try {
+        service.handle("topic3", consumerRecord.value());
+      }
+        catch (Exception e2) {
+        try {
+          service.handle("topic3", consumerRecord.value());
+        } catch (Exception ignore) {
+          LOGGER.info("Thrice failed service handling");
+        }
+        }
+      }
     ack.acknowledge();
   }
 }

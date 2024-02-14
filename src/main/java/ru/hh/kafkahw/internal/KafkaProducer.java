@@ -24,6 +24,7 @@ public class KafkaProducer {
     LOGGER.info("send to kafka, topic {}, payload {}", topic, payload);
     kafkaTemplate.send(topic, payload);
     if (random.nextInt(100) < 2) {
+      LOGGER.warn("silent delivery, topic {}, payload {}", topic, payload);
       throw new RuntimeException();
     }
   }
