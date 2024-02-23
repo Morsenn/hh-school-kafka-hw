@@ -1,9 +1,6 @@
 package ru.hh.kafkahw;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -97,25 +94,12 @@ class KafkaTest {
     }
 
     @Bean
-    ConcurrentKafkaListenerContainerFactory<Integer, String> kafkaListenerContainerFactory(KafkaContainer kafka, CommonDelegatingErrorHandler errorHandler) {
+    ConcurrentKafkaListenerContainerFactory<Integer, String> kafkaListenerContainerFactory(KafkaContainer kafka, MainErrorHandler errorHandler) {
       ConcurrentKafkaListenerContainerFactory<Integer, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
       factory.setConsumerFactory(consumerFactory(kafka));
-      factory.setCommonErrorHandler(errorHandler);
+      factory.setCommonErrorHandler(errorHandler.getErrorHandler());
       factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
       return factory;
-    }
-
-    @Bean
-    CommonDelegatingErrorHandler delegatingErrorHandler() {
-      DefaultErrorHandler pass = new DefaultErrorHandler(new FixedBackOff(0, 0));
-      DefaultErrorHandler atMostOnce = new DefaultErrorHandler(new FixedBackOff(0, 0));
-      DefaultErrorHandler atLeastOnce = new DefaultErrorHandler(new ExponentialBackOff(0, 1.0));
-      DefaultErrorHandler exactlyOnce = new DefaultErrorHandler(new FixedBackOff(0, 1));
-      CommonDelegatingErrorHandler errorHandler = new CommonDelegatingErrorHandler(pass);
-      errorHandler.addDelegate(AtLeastOnceProcessingException.class, atLeastOnce);
-      errorHandler.addDelegate(ExactlyOnceProcessingException.class, exactlyOnce);
-      errorHandler.addDelegate(AtMostOnceProcessingException.class, atMostOnce);
-      return errorHandler;
     }
 
     @Bean
