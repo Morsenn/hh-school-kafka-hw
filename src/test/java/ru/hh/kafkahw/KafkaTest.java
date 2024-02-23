@@ -6,6 +6,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import org.apache.kafka.clients.admin.AdminClientConfig;
+import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -20,16 +23,18 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
-import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
-import org.springframework.kafka.core.DefaultKafkaProducerFactory;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.core.ProducerFactory;
-import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.config.TopicBuilder;
+import org.springframework.kafka.core.*;
+import org.springframework.kafka.listener.*;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.util.backoff.ExponentialBackOff;
+import org.springframework.util.backoff.FixedBackOff;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
+import ru.hh.kafkahw.exceptions.AtLeastOnceProcessingException;
+import ru.hh.kafkahw.exceptions.AtMostOnceProcessingException;
+import ru.hh.kafkahw.exceptions.ExactlyOnceProcessingException;
 import ru.hh.kafkahw.internal.Service;
 
 @RunWith(SpringRunner.class)
@@ -92,11 +97,25 @@ class KafkaTest {
     }
 
     @Bean
-    ConcurrentKafkaListenerContainerFactory<Integer, String> kafkaListenerContainerFactory(KafkaContainer kafka) {
+    ConcurrentKafkaListenerContainerFactory<Integer, String> kafkaListenerContainerFactory(KafkaContainer kafka, CommonDelegatingErrorHandler errorHandler) {
       ConcurrentKafkaListenerContainerFactory<Integer, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
       factory.setConsumerFactory(consumerFactory(kafka));
+      factory.setCommonErrorHandler(errorHandler);
       factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
       return factory;
+    }
+
+    @Bean
+    CommonDelegatingErrorHandler delegatingErrorHandler() {
+      DefaultErrorHandler pass = new DefaultErrorHandler(new FixedBackOff(0, 0));
+      DefaultErrorHandler atMostOnce = new DefaultErrorHandler(new FixedBackOff(0, 0));
+      DefaultErrorHandler atLeastOnce = new DefaultErrorHandler(new ExponentialBackOff(0, 1.0));
+      DefaultErrorHandler exactlyOnce = new DefaultErrorHandler(new FixedBackOff(0, 1));
+      CommonDelegatingErrorHandler errorHandler = new CommonDelegatingErrorHandler(pass);
+      errorHandler.addDelegate(AtLeastOnceProcessingException.class, atLeastOnce);
+      errorHandler.addDelegate(ExactlyOnceProcessingException.class, exactlyOnce);
+      errorHandler.addDelegate(AtMostOnceProcessingException.class, atMostOnce);
+      return errorHandler;
     }
 
     @Bean
@@ -130,5 +149,19 @@ class KafkaTest {
     public KafkaTemplate<String, String> kafkaTemplate(KafkaContainer kafka) {
       return new KafkaTemplate<>(producerFactory(kafka));
     }
+    @Bean
+    public KafkaAdmin admin(KafkaContainer kafka) {
+      Map<String, Object> configs = new HashMap<>();
+      configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
+      return new KafkaAdmin(configs);
+    }
+
+    @Bean
+    public NewTopic exactlyOnceTopic() {
+      return TopicBuilder.name("topic3")
+          .partitions(2)
+          .build();
+    }
+
   }
 }

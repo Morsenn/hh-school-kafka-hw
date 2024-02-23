@@ -18,7 +18,7 @@ public class Service {
     }
     counters.computeIfAbsent(topic, key -> new ConcurrentHashMap<>())
         .computeIfAbsent(message, key -> new AtomicInteger(0)).incrementAndGet();
-    if (random.nextInt(100) < 2) {
+    if (random.nextInt(100) < 20) {
       throw new RuntimeException();
     }
   }
