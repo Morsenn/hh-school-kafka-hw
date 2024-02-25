@@ -22,12 +22,7 @@ public class KafkaProducer {
       throw new RuntimeException();
     }
     LOGGER.info("send to kafka, topic {}, payload {}", topic, payload);
-    if ("topic3".equals(topic)) {
-      kafkaTemplate.send(topic, 1, payload, payload);
-    }
-    else {
-      kafkaTemplate.send(topic, payload);
-    }
+    kafkaTemplate.send(topic, payload);
     if (random.nextInt(100) < 2) {
       LOGGER.warn("silent delivery, topic {}, payload {}", topic, payload);
       throw new RuntimeException();
