@@ -3,51 +3,32 @@ package ru.hh.kafkahw;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import ru.hh.kafkahw.internal.KafkaProducer;
+import ru.hh.kafkahw.senders.SendingStrategy;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class Sender {
-  private final KafkaProducer producer;
+  private final Map<String, SendingStrategy> sendingStrategies;
 
   @Autowired
-  public Sender(KafkaProducer producer) {
-    this.producer = producer;
+  public Sender(List<SendingStrategy> senders) {
+    // Здесь мы собираем мапу вида Топик - Стратегия, которая к нему применяется
+    this.sendingStrategies = senders.stream().flatMap(
+        sender -> sender.getTopics()
+            .stream()
+            .map(topic -> Map.entry(topic, sender))
+        ).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
   }
 
   public void doSomething(String topic, String message) {
-    if ("topic1".equals(topic)) {
-      atMostOnce(topic, message);
+    SendingStrategy strategy = sendingStrategies.get(topic);
+    if (strategy == null) {
+      throw new IllegalArgumentException("This topic don't have any sending strategy");
     }
-    else if ("topic2".equals(topic)) {
-      atLeastOnce(topic, message);
-    }
-    else if ("topic3".equals(topic)){
-      exactlyOnce(topic, message);
-    }
-    else {
-      throw new RuntimeException("Unknown topic");
-    }
+    strategy.send(topic, message);
   }
 
-  private void atMostOnce(String topic, String message) {
-    tryToSendMessage(topic, message);
-  }
-
-  private void atLeastOnce(String topic, String message) {
-    while (!tryToSendMessage(topic, message));
-  }
-
-  private void exactlyOnce(String topic, String message) {
-    boolean a = !tryToSendMessage(topic, message) &&
-        !tryToSendMessage(topic, message); //&&
-        //!tryToSendMessage(topic, message);
-  }
-
-  private boolean tryToSendMessage(String topic, String message){
-    try {
-      producer.send(topic, message);
-    } catch (Exception ignore) {
-      return false;
-    }
-    return true;
-  }
 }

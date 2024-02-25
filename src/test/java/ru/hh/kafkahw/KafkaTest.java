@@ -15,6 +15,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -25,14 +26,12 @@ import org.springframework.kafka.core.*;
 import org.springframework.kafka.listener.*;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringRunner;
-import org.springframework.util.backoff.ExponentialBackOff;
-import org.springframework.util.backoff.FixedBackOff;
 import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
-import ru.hh.kafkahw.exceptions.AtLeastOnceProcessingException;
-import ru.hh.kafkahw.exceptions.AtMostOnceProcessingException;
-import ru.hh.kafkahw.exceptions.ExactlyOnceProcessingException;
+import ru.hh.kafkahw.internal.KafkaProducer;
 import ru.hh.kafkahw.internal.Service;
+import ru.hh.kafkahw.producerinterceptor.ExactlyOnceProducerInterceptor;
+import ru.hh.kafkahw.senders.ExactlyOnceSend;
 
 @RunWith(SpringRunner.class)
 @Import(KafkaTest.KafkaTestConfiguration.class)
@@ -94,7 +93,9 @@ class KafkaTest {
     }
 
     @Bean
-    ConcurrentKafkaListenerContainerFactory<Integer, String> kafkaListenerContainerFactory(KafkaContainer kafka, MainErrorHandler errorHandler) {
+    ConcurrentKafkaListenerContainerFactory<Integer, String> kafkaListenerContainerFactory(
+        KafkaContainer kafka,
+        MainErrorHandler errorHandler) {
       ConcurrentKafkaListenerContainerFactory<Integer, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
       factory.setConsumerFactory(consumerFactory(kafka));
       factory.setCommonErrorHandler(errorHandler.getErrorHandler());
@@ -129,12 +130,35 @@ class KafkaTest {
       return new DefaultKafkaProducerFactory<>(configProps);
     }
 
+    @Bean(name = "exactlyOnceProcessingTopics")
+    public List<String> processingTopics() {
+      return List.of("topic3");
+    }
+
     @Bean
-    public KafkaTemplate<String, String> kafkaTemplate(KafkaContainer kafka) {
-      return new KafkaTemplate<>(producerFactory(kafka));
+    ExactlyOnceProducerInterceptor producerInterceptor(@Qualifier("exactlyOnceProcessingTopics") List<String> topics) {
+      return new ExactlyOnceProducerInterceptor(topics);
+    }
+
+    @Bean
+    ExactlyOnceSend exactlyOnceSend(
+        KafkaProducer producer,
+        @Qualifier("exactlyOnceProcessingTopics") List<String> topics) {
+      return new ExactlyOnceSend(producer, topics);
+    }
+
+    @Bean
+    public KafkaTemplate<String, String> kafkaTemplate(
+        KafkaContainer kafka,
+        ExactlyOnceProducerInterceptor producerInterceptor
+    ) {
+      KafkaTemplate<String, String> template = new KafkaTemplate<>(producerFactory(kafka));
+      template.setProducerInterceptor(producerInterceptor);
+      return template;
     }
     @Bean
     public KafkaAdmin admin(KafkaContainer kafka) {
+      // Этот бин нужен для создания топика с 2 партициями
       Map<String, Object> configs = new HashMap<>();
       configs.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, kafka.getBootstrapServers());
       return new KafkaAdmin(configs);

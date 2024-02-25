@@ -10,6 +10,7 @@ import ru.hh.kafkahw.exceptions.ExactlyOnceProcessingException;
 
 @Component
 public class AtLeastOnceErrorHandler implements ErrorHandlingStrategy{
+  // Бесконечно отправляем, пока не перестанем получать исключения
   private final Class<? extends Throwable> exception = AtLeastOnceProcessingException.class;
   private final CommonErrorHandler errorHandler = new DefaultErrorHandler(
       new ExponentialBackOff(0, 1.0)
