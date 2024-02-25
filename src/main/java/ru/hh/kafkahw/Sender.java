@@ -2,7 +2,6 @@ package ru.hh.kafkahw;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import ru.hh.kafkahw.internal.KafkaProducer;
 import ru.hh.kafkahw.senders.SendingStrategy;
 
 import java.util.List;

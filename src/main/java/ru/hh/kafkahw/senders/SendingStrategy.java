@@ -1,7 +1,5 @@
 package ru.hh.kafkahw.senders;
 
-import ru.hh.kafkahw.internal.KafkaProducer;
-
 import java.util.List;
 
 // Стратегия отправки сообщения в кафку и список топиков, для которых она реализуется

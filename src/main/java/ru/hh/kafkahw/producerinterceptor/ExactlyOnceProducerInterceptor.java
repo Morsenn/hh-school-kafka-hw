@@ -3,7 +3,6 @@ package ru.hh.kafkahw.producerinterceptor;
 import org.apache.kafka.clients.producer.ProducerInterceptor;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import ru.hh.kafkahw.senders.ExactlyOnceSend;
 
 import java.util.List;
 import java.util.Map;

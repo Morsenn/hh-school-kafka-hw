@@ -5,7 +5,6 @@ import org.springframework.kafka.listener.DefaultErrorHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.util.backoff.FixedBackOff;
 import ru.hh.kafkahw.exceptions.AtMostOnceProcessingException;
-import ru.hh.kafkahw.exceptions.ExactlyOnceProcessingException;
 
 @Component
 public class AtMostOnceErrorHandler implements ErrorHandlingStrategy{
