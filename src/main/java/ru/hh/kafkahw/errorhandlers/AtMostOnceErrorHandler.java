@@ -9,12 +9,11 @@ import ru.hh.kafkahw.exceptions.AtMostOnceProcessingException;
 @Component
 public class AtMostOnceErrorHandler implements ErrorHandlingStrategy{
   // Отправляем только один раз
-  private final Class<? extends Throwable> exception = AtMostOnceProcessingException.class;
   private final CommonErrorHandler errorHandler = new DefaultErrorHandler(new FixedBackOff(0, 0));
 
   @Override
   public Class<? extends Throwable> getException() {
-    return exception;
+    return AtMostOnceProcessingException.class;
   }
 
   @Override

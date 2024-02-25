@@ -8,11 +8,10 @@ import ru.hh.kafkahw.exceptions.ExactlyOnceProcessingException;
 
 @Component
 public class ExactlyOnceErrorHandler implements ErrorHandlingStrategy{
-  private final Class<? extends Throwable> exception = ExactlyOnceProcessingException.class;
   private final CommonErrorHandler errorHandler = new DefaultErrorHandler(new FixedBackOff(0, 1));
 
   @Override
-  public Class<? extends Throwable> getException() { return exception; }
+  public Class<? extends Throwable> getException() { return ExactlyOnceProcessingException.class; }
 
   @Override
   public CommonErrorHandler getErrorHandler() { return errorHandler; }

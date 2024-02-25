@@ -9,13 +9,12 @@ import ru.hh.kafkahw.exceptions.AtLeastOnceProcessingException;
 @Component
 public class AtLeastOnceErrorHandler implements ErrorHandlingStrategy{
   // Бесконечно отправляем, пока не перестанем получать исключения
-  private final Class<? extends Throwable> exception = AtLeastOnceProcessingException.class;
   private final CommonErrorHandler errorHandler = new DefaultErrorHandler(
       new ExponentialBackOff(0, 1.0)
   );
 
   @Override
-  public Class<? extends Throwable> getException() { return exception; }
+  public Class<? extends Throwable> getException() { return AtLeastOnceProcessingException.class; }
 
   @Override
   public CommonErrorHandler getErrorHandler() { return errorHandler; }
